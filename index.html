@@ -220,7 +220,7 @@ const DATA = {
   income: {
     spencer: {
       label: "Spencer",
-      totalPay: 6248.36,
+      totalPay: 6248.36, // net monthly
       distributions: [
         { label: "Pre-tax 401k",              amount:  903.84, account: "Empower 401k",          category: "Retirement" },
         { label: "401k Company Match",         amount:  840.58, account: "Empower 401k",          category: "Retirement" },
@@ -747,7 +747,7 @@ function renderIncome() {
   // KPI row
   document.getElementById('incomeKpiRow').innerHTML = `
     <div class="kpi" style="--accent-color:#34d399">
-      <div class="kpi-label">Monthly Income</div>
+      <div class="kpi-label">Monthly Income (Net)</div>
       <div class="kpi-value">${fmtK(combinedPay)}</div>
       <div class="kpi-sub">${fmt(combinedPay)} gross</div>
     </div>
@@ -800,7 +800,7 @@ function renderIncome() {
           <h3>${person.label}</h3>
           <div style="display:flex;gap:20px">
             <div style="text-align:right">
-              <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.6px">Gross Monthly</div>
+              <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.6px">Net Monthly</div>
               <div style="font-weight:700">${fmt(person.totalPay)}</div>
             </div>
             <div style="text-align:right">
