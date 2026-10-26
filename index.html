@@ -5,6 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spencer & Bridget — Financial Overview</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script type="module">
+    // ── Firebase ──────────────────────────────────────────
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBd4A_pADDrgyoLJnFkeiGtDTrDTV7B2BU",
+      authDomain: "strand-financial.firebaseapp.com",
+      projectId: "strand-financial",
+      storageBucket: "strand-financial.firebasestorage.app",
+      messagingSenderId: "467096853715",
+      appId: "1:467096853715:web:4122e315b741214edac826"
+    };
+
+    const fbApp = initializeApp(firebaseConfig);
+    const db = getFirestore(fbApp);
+    const BALANCES_DOC = doc(db, 'dashboard', 'balances');
+
+    window._fbSaveBalances = async function(balances) {
+      await setDoc(BALANCES_DOC, { balances, updatedAt: new Date().toISOString() });
+    };
+
+    window._fbLoadBalances = async function() {
+      const snap = await getDoc(BALANCES_DOC);
+      return snap.exists() ? snap.data().balances : null;
+    };
+
+    // Init: load from Firestore, then render
+    (async () => {
+      try {
+        const balances = await window._fbLoadBalances();
+        if (balances) {
+          balances.forEach((b, i) => {
+            if (window.DATA && window.DATA.accounts[i] !== undefined)
+              window.DATA.accounts[i].balance = b;
+          });
+          localStorage.setItem('sb_financial_balances', JSON.stringify(balances));
+        } else {
+          // First load — push hardcoded values up to Firestore
+          const initial = window.DATA.accounts.map(a => a.balance);
+          await window._fbSaveBalances(initial);
+        }
+      } catch(e) {
+        console.warn('Firestore load failed, using local data:', e);
+      }
+      window.renderAll();
+    })();
+  </script>
   <style>
     :root {
       --bg: #0f1117;
@@ -663,9 +711,23 @@ function saveEdit() {
   document.querySelectorAll('#editFields input[data-idx]').forEach(inp => {
     DATA.accounts[+inp.dataset.idx].balance = parseFloat(inp.value)||0;
   });
+  const balances = DATA.accounts.map(a => a.balance);
   saveToStorage();
   closeEdit();
   renderAll();
+
+  // Push to Firestore — all devices see the update
+  const btn = document.querySelector('#editModal .btn-primary');
+  if (window._fbSaveBalances) {
+    if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+    window._fbSaveBalances(balances)
+      .then(() => { if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; } })
+      .catch(e => {
+        console.error('Firestore save failed:', e);
+        if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
+        alert('Saved locally, but cloud sync failed. Check your connection.');
+      });
+  }
 }
 
 // ── Income page ───────────────────────────────────────────
@@ -824,8 +886,9 @@ function renderAll() {
   renderAccountsTable(c);
 }
 
-loadFromStorage();
-renderAll();
+// Expose globals for Firebase module script
+window.DATA = DATA;
+window.renderAll = renderAll;
 </script>
 </body>
 </html>
